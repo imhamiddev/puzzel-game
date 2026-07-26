@@ -11,7 +11,10 @@ export async function POST(
   const body = await req.json().catch(() => ({}));
   const playerId = body.playerId as string | undefined;
 
-  const room = await prisma.room.findUnique({ where: { code: code.toUpperCase() } });
+  const room = await prisma.room.findUnique({
+    where: { code: code.toUpperCase() },
+    select: { id: true, hostId: true, status: true },
+  });
   if (!room) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }

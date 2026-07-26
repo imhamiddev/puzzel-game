@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import clsx from "clsx";
 import PuzzlePieceComponent from "./PuzzlePiece";
@@ -17,7 +18,11 @@ interface SlotProps {
   isCorrect: boolean;
 }
 
-function Slot({ position, size, piece, isCorrect }: SlotProps) {
+// Memoized because a board can have up to 64 slots (EXPERT difficulty).
+// Without this, every drag/drop re-renders all 64 slots even though only
+// 1-2 actually changed piece/isCorrect — this cuts that down to just the
+// slots whose props actually changed.
+const Slot = memo(function Slot({ position, size, piece, isCorrect }: SlotProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${position}` });
 
   return (
@@ -41,7 +46,7 @@ function Slot({ position, size, piece, isCorrect }: SlotProps) {
       )}
     </div>
   );
-}
+});
 
 interface PuzzleBoardProps {
   rows: number;

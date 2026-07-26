@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImagePlus, X, Upload } from "lucide-react";
 
@@ -13,6 +13,15 @@ export default function UploadBox({ onFileSelected }: UploadBoxProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Revoke each blob URL as soon as it's replaced or the component unmounts.
+  // Without this, every time the user swaps their photo (or navigates away
+  // with one selected), the previous blob stays alive in memory for the
+  // rest of the page's lifetime — it adds up fast with large photos.
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   const handleFile = useCallback(
     (file: File | undefined | null) => {

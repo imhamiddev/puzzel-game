@@ -9,31 +9,28 @@ export async function GET(
   const room = await prisma.room.findUnique({
     where: { code: code.toUpperCase() },
     select: {
-      id: true,
-      status: true,
       rows: true,
       cols: true,
+      status: true,
       imageUrl: true,
       startedAt: true,
+      pieces: {
+        orderBy: { pieceIndex: "asc" },
+        select: {
+          id: true,
+          pieceIndex: true,
+          correctPosition: true,
+          imageUrl: true,
+          row: true,
+          col: true,
+        },
+      },
     },
   });
 
   if (!room) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
-
-  const pieces = await prisma.puzzlePiece.findMany({
-    where: { roomId: room.id },
-    orderBy: { pieceIndex: "asc" },
-    select: {
-      id: true,
-      pieceIndex: true,
-      correctPosition: true,
-      imageUrl: true,
-      row: true,
-      col: true,
-    },
-  });
 
   return NextResponse.json({
     room: {
@@ -43,6 +40,6 @@ export async function GET(
       startedAt: room.startedAt,
       previewUrl: room.imageUrl,
     },
-    pieces,
+    pieces: room.pieces,
   });
 }

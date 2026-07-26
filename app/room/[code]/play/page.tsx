@@ -14,7 +14,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Move, TrendingUp } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Skeleton from "@/components/ui/Skeleton";
 import PuzzleBoard, { type BoardPieceData } from "@/components/game/PuzzleBoard";
 import PieceTray from "@/components/game/PieceTray";
@@ -233,14 +232,19 @@ export default function PlayPage() {
     submitMove(newSlots);
   };
 
-  const boardSize = typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 420) : 380;
-  const pieceSize = data ? (boardSize - 3 * (data.room.cols - 1)) / data.room.cols : 40;
-  const trayPieceSize = Math.min(pieceSize, 76);
+  const boardSize = useMemo(
+    () => (typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 420) : 380),
+    []
+  );
+  const pieceSize = useMemo(
+    () => (data ? (boardSize - 3 * (data.room.cols - 1)) / data.room.cols : 40),
+    [data, boardSize]
+  );
+  const trayPieceSize = useMemo(() => Math.min(pieceSize, 76), [pieceSize]);
 
   if (phase === "loading" || !data) {
     return (
       <main className="relative min-h-screen px-5 py-6 safe-top safe-bottom">
-        <AnimatedBackground />
         <div className="max-w-md mx-auto space-y-5">
           <Skeleton className="h-10 w-40 mx-auto" />
           <Skeleton className="aspect-square w-full rounded-3xl" />
@@ -253,7 +257,6 @@ export default function PlayPage() {
   if (phase === "countdown") {
     return (
       <main className="relative min-h-screen flex items-center justify-center">
-        <AnimatedBackground />
         <AnimatePresence mode="wait">
           <motion.div
             key={countdownVal}
@@ -276,7 +279,6 @@ export default function PlayPage() {
 
   return (
     <main className="relative min-h-screen px-4 py-4 game-lock-scroll safe-top safe-bottom flex flex-col">
-      <AnimatedBackground />
 
       <div className="grid grid-cols-3 gap-2.5 mb-4 max-w-md mx-auto w-full shrink-0">
         <div className="glass rounded-2xl py-3 text-center">

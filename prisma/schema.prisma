@@ -42,8 +42,6 @@ model Room {
 
   players Player[]
   pieces  PuzzlePiece[]
-
-  @@index([code])
 }
 
 model Player {

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Users } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
@@ -72,8 +71,6 @@ export default function JoinPage() {
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-5 safe-top safe-bottom">
-      <AnimatedBackground />
-
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <Card strong>
           <div className="h-14 w-14 rounded-2xl bg-primary-gradient flex items-center justify-center shadow-glow-sm mx-auto mb-4">

@@ -16,11 +16,14 @@ interface WinnerModalProps {
   onViewLeaderboard: () => void;
 }
 
-function fireConfetti() {
+function fireConfetti(): () => void {
   const duration = 2200;
   const end = Date.now() + duration;
+  let cancelled = false;
+  let rafId: number;
 
   (function frame() {
+    if (cancelled) return;
     confetti({
       particleCount: 3,
       angle: 60,
@@ -35,7 +38,7 @@ function fireConfetti() {
       origin: { x: 1 },
       colors: ["#7c5cff", "#00e5c7", "#ffd166"],
     });
-    if (Date.now() < end) requestAnimationFrame(frame);
+    if (Date.now() < end) rafId = requestAnimationFrame(frame);
   })();
 
   confetti({
@@ -44,11 +47,21 @@ function fireConfetti() {
     origin: { y: 0.4 },
     colors: ["#7c5cff", "#00e5c7", "#ffd166"],
   });
+
+  return () => {
+    cancelled = true;
+    if (rafId) cancelAnimationFrame(rafId);
+  };
 }
 
 export default function WinnerModal({ open, onClose, rank, finishTime, moves, onViewLeaderboard }: WinnerModalProps) {
   useEffect(() => {
-    if (open) fireConfetti();
+    if (!open) return;
+    // Stop the confetti loop if the modal closes (e.g. the user taps "View
+    // Leaderboard" and navigates away) while it's still mid-animation —
+    // otherwise it keeps firing for up to 2.2s on a screen that's gone.
+    const stop = fireConfetti();
+    return stop;
   }, [open]);
 
   const isFirst = rank === 1;

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Play, Puzzle as PuzzleIcon } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
@@ -105,8 +104,6 @@ export default function LobbyPage() {
 
   return (
     <main className="relative min-h-screen px-5 py-6 safe-top safe-bottom">
-      <AnimatedBackground />
-
       <div className="max-w-md mx-auto space-y-5">
         <div className="text-center mb-2">
           <div className="inline-flex h-11 w-11 rounded-2xl bg-primary-gradient items-center justify-center shadow-glow-sm mb-3">

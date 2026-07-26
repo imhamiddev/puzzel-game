@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, Home, RotateCcw } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import Leaderboard, { type LeaderboardEntry } from "@/components/game/Leaderboard";
@@ -31,17 +30,33 @@ export default function ResultsPage() {
   }, [loaded, session, code, router]);
 
   useEffect(() => {
+    let stopped = false;
     fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 3000);
-    return () => clearInterval(interval);
-  }, [fetchLeaderboard]);
+    const interval = setInterval(async () => {
+      if (stopped) return;
+      const res = await fetch(`/api/rooms/${code}/leaderboard`);
+      const data = await res.json();
+      if (res.ok) {
+        setEntries(data.players);
+        // Stop polling once every player has finished — nothing left to
+        // update, so continuing to hit the API every 3s would just waste
+        // requests for both the client and the server.
+        if (data.players.length > 0 && data.players.every((p: LeaderboardEntry) => p.finished)) {
+          stopped = true;
+          clearInterval(interval);
+        }
+      }
+    }, 3000);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [fetchLeaderboard, code]);
 
   const allFinished = entries?.every((e) => e.finished) ?? false;
 
   return (
     <main className="relative min-h-screen px-5 py-6 safe-top safe-bottom">
-      <AnimatedBackground />
-
       <div className="max-w-md mx-auto">
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
           <div className="inline-flex h-14 w-14 rounded-2xl bg-gold-gradient items-center justify-center shadow-glow mb-3">

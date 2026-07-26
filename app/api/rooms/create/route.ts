@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { generateRoomCode } from "@/lib/game/room-code";
 import { generatePuzzleFromImage } from "@/lib/game/puzzle-generator";
 import { DIFFICULTIES, type DifficultyKey } from "@/lib/game/difficulty";
@@ -51,7 +52,10 @@ export async function POST(req: NextRequest) {
     // Generate a unique room code, retry on collision
     let code = generateRoomCode();
     for (let attempts = 0; attempts < 5; attempts++) {
-      const existing = await prisma.room.findUnique({ where: { code } });
+      const existing = await prisma.room.findUnique({
+        where: { code },
+        select: { id: true },
+      });
       if (!existing) break;
       code = generateRoomCode();
     }
@@ -68,40 +72,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const room = await prisma.room.create({
-      data: {
-        code,
-        hostId: "", // set after host player is created
-        imageUrl: generated.fullImageUrl,
-        imageWidth: generated.width,
-        imageHeight: generated.height,
-        gridSize: difficulty,
-        rows,
-        cols,
-        status: "LOBBY",
-        pieces: {
-          create: generated.pieces.map((p) => ({
-            pieceIndex: p.pieceIndex,
-            correctPosition: p.correctPosition,
-            imageUrl: p.imageUrl,
-            row: p.row,
-            col: p.col,
-          })),
+    const { room, host } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const room = await tx.room.create({
+        data: {
+          code,
+          hostId: "", // set right after host player is created, in the same transaction
+          imageUrl: generated.fullImageUrl,
+          imageWidth: generated.width,
+          imageHeight: generated.height,
+          gridSize: difficulty,
+          rows,
+          cols,
+          status: "LOBBY",
+          pieces: {
+            create: generated.pieces.map((p) => ({
+              pieceIndex: p.pieceIndex,
+              correctPosition: p.correctPosition,
+              imageUrl: p.imageUrl,
+              row: p.row,
+              col: p.col,
+            })),
+          },
         },
-      },
-    });
+      });
 
-    const host = await prisma.player.create({
-      data: {
-        roomId: room.id,
-        nickname,
-        isHost: true,
-      },
-    });
+      const host = await tx.player.create({
+        data: {
+          roomId: room.id,
+          nickname,
+          isHost: true,
+        },
+      });
 
-    await prisma.room.update({
-      where: { id: room.id },
-      data: { hostId: host.id },
+      await tx.room.update({
+        where: { id: room.id },
+        data: { hostId: host.id },
+      });
+
+      return { room, host };
     });
 
     return NextResponse.json({

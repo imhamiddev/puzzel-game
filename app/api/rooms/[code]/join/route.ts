@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export async function POST(
   req: NextRequest,
@@ -16,7 +17,10 @@ export async function POST(
     );
   }
 
-  const room = await prisma.room.findUnique({ where: { code: code.toUpperCase() } });
+  const room = await prisma.room.findUnique({
+    where: { code: code.toUpperCase() },
+    select: { id: true, status: true },
+  });
   if (!room) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
@@ -27,18 +31,31 @@ export async function POST(
     );
   }
 
-  const existingCount = await prisma.player.count({ where: { roomId: room.id } });
-  if (existingCount >= 20) {
+  // Wrapped in a transaction so the count-check and create are atomic —
+  // without this, two players joining at the exact same moment could both
+  // pass the count check and push the room over the 20-player cap.
+  const player = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existingCount = await tx.player.count({ where: { roomId: room.id } });
+    if (existingCount >= 20) {
+      throw new RoomFullError();
+    }
+    return tx.player.create({
+      data: {
+        roomId: room.id,
+        nickname,
+        isHost: false,
+      },
+    });
+  }).catch((err: unknown) => {
+    if (err instanceof RoomFullError) return null;
+    throw err;
+  });
+
+  if (!player) {
     return NextResponse.json({ error: "This room is full (max 20 players)." }, { status: 409 });
   }
 
-  const player = await prisma.player.create({
-    data: {
-      roomId: room.id,
-      nickname,
-      isHost: false,
-    },
-  });
-
   return NextResponse.json({ playerId: player.id, roomId: room.id });
 }
+
+class RoomFullError extends Error {}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { computeProgress, isBoardComplete, computeServerFinishTime } from "@/lib/game/validation";
 import { getStorageProvider } from "@/lib/storage";
 
@@ -23,7 +24,10 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const room = await prisma.room.findUnique({ where: { code: code.toUpperCase() } });
+  const room = await prisma.room.findUnique({
+    where: { code: code.toUpperCase() },
+    select: { id: true, code: true, status: true, startedAt: true, rows: true, cols: true },
+  });
   if (!room) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
@@ -31,7 +35,10 @@ export async function POST(
     return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
   }
 
-  const player = await prisma.player.findUnique({ where: { id: playerId } });
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    select: { id: true, roomId: true, moves: true, finished: true },
+  });
   if (!player || player.roomId !== room.id) {
     return NextResponse.json({ error: "Player not found in this room." }, { status: 404 });
   }
@@ -46,32 +53,39 @@ export async function POST(
 
   if (complete) {
     const finishTime = computeServerFinishTime(room.startedAt);
-    const updated = await prisma.player.update({
-      where: { id: player.id },
-      data: {
-        moves: newMoves,
-        progress: 100,
-        finished: true,
-        finishTime,
-        finishedAt: new Date(),
-        lastSeenAt: new Date(),
-      },
-    });
 
-    // Check if every player in the room has now finished. If so, close the
-    // room out and delete its images from storage — nothing left references
-    // them once the race is over, and this keeps the bucket from growing
-    // unbounded with images from finished games.
-    const remaining = await prisma.player.count({
-      where: { roomId: room.id, finished: false },
-    });
-
-    if (remaining === 0) {
-      await prisma.room.update({
-        where: { id: room.id },
-        data: { status: "FINISHED" },
+    const { updated, allFinished } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const updated = await tx.player.update({
+        where: { id: player.id },
+        data: {
+          moves: newMoves,
+          progress: 100,
+          finished: true,
+          finishTime,
+          finishedAt: new Date(),
+          lastSeenAt: new Date(),
+        },
       });
 
+      const remaining = await tx.player.count({
+        where: { roomId: room.id, finished: false },
+      });
+
+      let allFinished = false;
+      if (remaining === 0) {
+        await tx.room.update({
+          where: { id: room.id },
+          data: { status: "FINISHED" },
+        });
+        allFinished = true;
+      }
+
+      return { updated, allFinished };
+    });
+
+    // Storage cleanup happens outside the transaction (it's not a DB
+    // operation and shouldn't hold the transaction open while it runs).
+    if (allFinished) {
       try {
         const storage = getStorageProvider();
         await storage.deletePrefix(`rooms/${room.code}`);

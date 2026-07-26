@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import UploadBox from "@/components/game/UploadBox";
@@ -54,8 +53,6 @@ export default function CreateRoomPage() {
 
   return (
     <main className="relative min-h-screen px-5 py-6 safe-top safe-bottom">
-      <AnimatedBackground />
-
       <div className="max-w-md mx-auto">
         <button
           onClick={() => router.back()}

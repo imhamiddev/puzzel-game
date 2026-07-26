@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Puzzle, Zap, Users, ArrowRight, X } from "lucide-react";
-import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 
@@ -21,8 +20,6 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen flex flex-col">
-      <AnimatedBackground />
-
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 safe-top safe-bottom">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
