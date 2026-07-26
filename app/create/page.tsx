@@ -17,10 +17,11 @@ export default function CreateRoomPage() {
   const [file, setFile] = useState<File | null>(null);
   const [nickname, setNickname] = useState("");
   const [difficulty, setDifficulty] = useState<DifficultyKey>("MEDIUM");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = !!file && nickname.trim().length > 0 && !loading;
+  const canSubmit = !!file && nickname.trim().length > 0 && password.trim().length > 0 && !loading;
 
   const handleCreate = async () => {
     if (!file || !nickname.trim()) return;
@@ -32,6 +33,7 @@ export default function CreateRoomPage() {
       formData.append("image", file);
       formData.append("nickname", nickname.trim());
       formData.append("difficulty", difficulty);
+      formData.append("password", password);
 
       const res = await fetch("/api/rooms/create", { method: "POST", body: formData });
       const data = await res.json();
@@ -88,6 +90,17 @@ export default function CreateRoomPage() {
             <p className="text-sm font-semibold text-white/70 mb-3 px-1">Difficulty</p>
             <DifficultySelector value={difficulty} onChange={setDifficulty} />
           </div>
+
+          <Card>
+            <label className="block text-sm font-semibold text-white/70 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter the room creation password"
+              className="w-full h-13 h-[52px] rounded-xl bg-white/5 border border-white/10 px-4 text-white placeholder:text-white/30 outline-none focus:border-primary transition-colors"
+            />
+          </Card>
 
           {error && (
             <p className="text-sm text-red-400 text-center bg-red-500/10 rounded-xl py-3 px-4">{error}</p>

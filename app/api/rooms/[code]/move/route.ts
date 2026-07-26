@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeProgress, isBoardComplete, computeServerFinishTime } from "@/lib/game/validation";
+import { getStorageProvider } from "@/lib/storage";
 
 /**
  * Called whenever a player places/moves a piece on the board.
@@ -56,6 +57,30 @@ export async function POST(
         lastSeenAt: new Date(),
       },
     });
+
+    // Check if every player in the room has now finished. If so, close the
+    // room out and delete its images from storage — nothing left references
+    // them once the race is over, and this keeps the bucket from growing
+    // unbounded with images from finished games.
+    const remaining = await prisma.player.count({
+      where: { roomId: room.id, finished: false },
+    });
+
+    if (remaining === 0) {
+      await prisma.room.update({
+        where: { id: room.id },
+        data: { status: "FINISHED" },
+      });
+
+      try {
+        const storage = getStorageProvider();
+        await storage.deletePrefix(`rooms/${room.code}`);
+      } catch (err) {
+        // Don't fail the request over a cleanup error — just log it.
+        console.error(`Failed to clean up images for room ${room.code}:`, err);
+      }
+    }
+
     return NextResponse.json({
       progress: 100,
       finished: true,

@@ -16,6 +16,12 @@ export async function POST(req: NextRequest) {
     const file = formData.get("image") as File | null;
     const nickname = (formData.get("nickname") as string | null)?.trim();
     const difficulty = (formData.get("difficulty") as string | null) as DifficultyKey | null;
+    const password = (formData.get("password") as string | null) ?? "";
+
+    const requiredPassword = process.env.CREATE_GAME_PASSWORD;
+    if (requiredPassword && password !== requiredPassword) {
+      return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
+    }
 
     if (!file) {
       return NextResponse.json({ error: "No image uploaded." }, { status: 400 });
