@@ -36,7 +36,7 @@ export async function POST(
   // pass the count check and push the room over the 20-player cap.
   const player = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const existingCount = await tx.player.count({ where: { roomId: room.id } });
-    if (existingCount >= 20) {
+    if (existingCount >= 50) {
       throw new RoomFullError();
     }
     return tx.player.create({
