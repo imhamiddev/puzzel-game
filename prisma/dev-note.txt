@@ -1,0 +1,1 @@
+Local .env created from .env.example placeholder — user must replace with real Neon DATABASE_URL and Supabase keys before running.

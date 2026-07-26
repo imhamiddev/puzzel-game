@@ -1,0 +1,81 @@
+// Puzzle Race - Prisma schema
+// Uses PostgreSQL (designed for Neon on Vercel)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum RoomStatus {
+  LOBBY
+  COUNTDOWN
+  PLAYING
+  FINISHED
+}
+
+enum GridSize {
+  EASY   // 3x3 - 9 pieces
+  MEDIUM // 4x4 - 16 pieces
+  HARD   // 6x6 - 36 pieces
+  EXPERT // 8x8 - 64 pieces
+}
+
+model Room {
+  id        String     @id @default(cuid())
+  code      String     @unique // short human friendly code e.g. ABC123
+  hostId    String     // player id of the host (references Player.id, no relation to avoid circular required FK)
+  imageUrl  String
+  imageWidth  Int      @default(0)
+  imageHeight Int      @default(0)
+  gridSize  GridSize   @default(MEDIUM)
+  rows      Int        @default(4)
+  cols      Int        @default(4)
+  status    RoomStatus @default(LOBBY)
+  startedAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  players Player[]
+  pieces  PuzzlePiece[]
+
+  @@index([code])
+}
+
+model Player {
+  id         String    @id @default(cuid())
+  roomId     String
+  nickname   String
+  isHost     Boolean   @default(false)
+  finishTime Int?      // milliseconds
+  moves      Int       @default(0)
+  finished   Boolean   @default(false)
+  finishedAt DateTime?
+  progress   Int       @default(0) // 0-100 percentage of pieces correctly placed
+  lastSeenAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([roomId, finished, finishTime, moves])
+}
+
+model PuzzlePiece {
+  id              String @id @default(cuid())
+  roomId          String
+  pieceIndex      Int    // 0-based index, order pieces were generated
+  correctPosition Int    // 0-based index of the correct slot in the grid
+  imageUrl        String
+  row             Int
+  col             Int
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@unique([roomId, pieceIndex])
+}
