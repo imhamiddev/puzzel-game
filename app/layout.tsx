@@ -1,22 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import "vazirmatn/Vazirmatn-font-face.css";
 import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "Puzzle Race — Challenge your friends. Solve faster. Win.",
+  title: "مسابقه پازل — دوستانت را به چالش بکش. سریع‌تر حل کن. ببر.",
   description:
-    "Create a custom jigsaw puzzle, invite your friends, and race to solve it first. Real-time multiplayer puzzle racing.",
+    "یک پازل اختصاصی از عکس دلخواهت بساز، دوستانت را دعوت کن و برای حل آن مسابقه بده. مسابقه پازل چندنفره به‌صورت زنده.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   openGraph: {
-    title: "Puzzle Race",
-    description: "Challenge your friends. Solve faster. Win.",
+    title: "مسابقه پازل",
+    description: "دوستانت را به چالش بکش. سریع‌تر حل کن. ببر.",
     type: "website",
   },
 };
@@ -36,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="fa" dir="rtl">
       <body className="bg-background font-sans antialiased min-h-screen">
         <AnimatedBackground />
         {children}

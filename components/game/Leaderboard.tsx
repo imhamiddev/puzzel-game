@@ -50,10 +50,10 @@ export default function Leaderboard({ entries, highlightId }: { entries: Leaderb
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white truncate flex items-center gap-2">
                 {entry.nickname}
-                {isMe && <span className="text-[11px] text-primary-300 font-normal">(You)</span>}
+                {isMe && <span className="text-[11px] text-primary-300 font-normal">(شما)</span>}
               </p>
               <p className="text-sm text-white/45">
-                {entry.finished ? `${entry.moves} moves` : `${entry.progress}% complete`}
+                {entry.finished ? `${entry.moves} حرکت` : `${entry.progress}٪ تکمیل شده`}
               </p>
             </div>
 
@@ -63,7 +63,7 @@ export default function Leaderboard({ entries, highlightId }: { entries: Leaderb
                   {formatTime(entry.finishTime)}
                 </p>
               ) : (
-                <p className="text-sm text-white/40">In progress</p>
+                <p className="text-sm text-white/40">در حال انجام</p>
               )}
             </div>
           </motion.div>
@@ -72,7 +72,7 @@ export default function Leaderboard({ entries, highlightId }: { entries: Leaderb
       {entries.length === 0 && (
         <div className="text-center py-10 text-white/40">
           <Trophy className="h-8 w-8 mx-auto mb-2 opacity-40" />
-          <p className="text-sm">No results yet</p>
+          <p className="text-sm">هنوز نتیجه‌ای ثبت نشده</p>
         </div>
       )}
     </div>

@@ -28,11 +28,11 @@ export default function UploadBox({ onFileSelected }: UploadBoxProps) {
       setError(null);
       if (!file) return;
       if (!file.type.startsWith("image/")) {
-        setError("Please choose an image file.");
+        setError("لطفاً یک فایل تصویری انتخاب کنید.");
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        setError("Image must be smaller than 10MB.");
+        setError("حجم تصویر باید کمتر از ۱۰ مگابایت باشد.");
         return;
       }
       const url = URL.createObjectURL(file);

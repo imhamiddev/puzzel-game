@@ -102,25 +102,25 @@ export default function WinnerModal({ open, onClose, rank, finishTime, moves, on
             </motion.div>
 
             <h2 className="text-2xl font-bold text-white mb-1">
-              {isFirst ? "You Won! 🎉" : "Puzzle Complete!"}
+              {isFirst ? "بردی! 🎉" : "پازل کامل شد!"}
             </h2>
             <p className="text-white/50 mb-6">
-              {isFirst ? "You solved it fastest!" : `You finished in ${rank === 2 ? "2nd" : rank === 3 ? "3rd" : `${rank}th`} place`}
+              {isFirst ? "سریع‌تر از همه حل کردی!" : `در جایگاه ${rank} به پایان رساندی`}
             </p>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="glass rounded-2xl py-4">
-                <p className="text-xs text-white/40 mb-1">Time</p>
+                <p className="text-xs text-white/40 mb-1">زمان</p>
                 <p className="text-xl font-mono font-bold text-white">{formatTime(finishTime)}</p>
               </div>
               <div className="glass rounded-2xl py-4">
-                <p className="text-xs text-white/40 mb-1">Moves</p>
+                <p className="text-xs text-white/40 mb-1">حرکت‌ها</p>
                 <p className="text-xl font-mono font-bold text-white">{moves}</p>
               </div>
             </div>
 
             <Button fullWidth onClick={onViewLeaderboard}>
-              View Leaderboard
+              مشاهده جدول امتیازات
             </Button>
           </motion.div>
         </motion.div>

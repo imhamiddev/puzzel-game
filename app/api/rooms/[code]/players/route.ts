@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { maybeAutoStartRoom } from "@/lib/game/auto-start";
 
 export async function GET(
   req: NextRequest,
@@ -8,11 +9,17 @@ export async function GET(
   const { code } = await params;
   const room = await prisma.room.findUnique({
     where: { code: code.toUpperCase() },
-    select: { id: true, status: true, startedAt: true },
+    select: { id: true, status: true, startedAt: true, scheduledStartAt: true },
   });
 
   if (!room) {
-    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    return NextResponse.json({ error: "اتاق پیدا نشد." }, { status: 404 });
+  }
+
+  const flipped = await maybeAutoStartRoom(room);
+  if (flipped) {
+    room.status = flipped.status as typeof room.status;
+    room.startedAt = flipped.startedAt;
   }
 
   const players = await prisma.player.findMany({

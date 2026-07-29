@@ -3,14 +3,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Play, Puzzle as PuzzleIcon } from "lucide-react";
+import { Play, Puzzle as PuzzleIcon, Clock } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
 import RoomCard from "@/components/game/RoomCard";
+import RoomUnavailable from "@/components/game/RoomUnavailable";
 import PlayerList, { type LobbyPlayer } from "@/components/game/PlayerList";
 import { usePlayerSession } from "@/lib/hooks/usePlayerSession";
 import { DIFFICULTIES } from "@/lib/game/difficulty";
+import { formatTehranTime } from "@/lib/game/tehran-time";
 
 interface RoomInfo {
   id: string;
@@ -21,6 +23,7 @@ interface RoomInfo {
   rows: number;
   cols: number;
   status: "LOBBY" | "COUNTDOWN" | "PLAYING" | "FINISHED";
+  scheduledStartAt?: string | null;
 }
 
 export default function LobbyPage() {
@@ -30,6 +33,7 @@ export default function LobbyPage() {
 
   const { session, loaded } = usePlayerSession(code);
   const [room, setRoom] = useState<RoomInfo | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +44,7 @@ export default function LobbyPage() {
     const res = await fetch(`/api/rooms/${code}`);
     const data = await res.json();
     if (res.ok) setRoom(data.room);
+    else setNotFound(true);
     return data.room as RoomInfo | undefined;
   }, [code]);
 
@@ -66,6 +71,10 @@ export default function LobbyPage() {
     if (!session) return;
     const interval = setInterval(async () => {
       const data = await fetchPlayers();
+      if (data.status === "FINISHED") {
+        router.push(`/room/${code}/results`);
+        return;
+      }
       if (data.status && data.status !== "LOBBY") {
         router.push(`/room/${code}/play`);
       }
@@ -86,13 +95,13 @@ export default function LobbyPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to start game.");
+        setError(data.error || "شروع بازی با خطا مواجه شد.");
         setStarting(false);
         return;
       }
       router.push(`/room/${code}/play`);
     } catch {
-      setError("Network error. Please try again.");
+      setError("خطای شبکه. لطفاً دوباره تلاش کنید.");
       setStarting(false);
     }
   };
@@ -102,6 +111,24 @@ export default function LobbyPage() {
 
   const difficultyLabel = room ? DIFFICULTIES[room.gridSize]?.description : "";
 
+  if (notFound) {
+    return (
+      <RoomUnavailable
+        title="اتاق پیدا نشد"
+        description="اتاقی با این کد پیدا نشد. لطفاً کد را بررسی کنید."
+      />
+    );
+  }
+
+  if (room?.status === "FINISHED") {
+    return (
+      <RoomUnavailable
+        title="این بازی به پایان رسیده است"
+        description="می‌توانید نتایج نهایی را در صفحه نتایج مشاهده کنید."
+      />
+    );
+  }
+
   return (
     <main className="relative min-h-screen px-5 py-6 safe-top safe-bottom">
       <div className="max-w-md mx-auto space-y-5">
@@ -109,7 +136,7 @@ export default function LobbyPage() {
           <div className="inline-flex h-11 w-11 rounded-2xl bg-primary-gradient items-center justify-center shadow-glow-sm mb-3">
             <PuzzleIcon className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Waiting Room</h1>
+          <h1 className="text-2xl font-bold text-white">اتاق انتظار</h1>
         </div>
 
         {room ? (
@@ -120,14 +147,28 @@ export default function LobbyPage() {
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 rounded-2xl overflow-hidden shrink-0 glass">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={room.imageUrl} alt="Puzzle preview" className="h-full w-full object-cover" />
+                  <img src={room.imageUrl} alt="پیش‌نمایش پازل" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <p className="text-white font-semibold">Puzzle Preview</p>
+                  <p className="text-white font-semibold">پیش‌نمایش پازل</p>
                   <p className="text-white/50 text-sm">{difficultyLabel}</p>
                 </div>
               </div>
             </Card>
+
+            {room.scheduledStartAt && (
+              <Card className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">شروع خودکار زمان‌بندی‌شده</p>
+                  <p className="text-white/50 text-xs mt-0.5">
+                    {formatTehranTime(room.scheduledStartAt)} (به وقت تهران)
+                  </p>
+                </div>
+              </Card>
+            )}
 
             <PlayerList players={players} />
 
@@ -143,11 +184,15 @@ export default function LobbyPage() {
                 loading={starting}
                 icon={<Play className="h-5 w-5" />}
               >
-                Start Game
+                شروع بازی
               </Button>
             ) : (
               <Card className="text-center py-5">
-                <p className="text-white/50 text-sm">Waiting for the host to start the game…</p>
+                <p className="text-white/50 text-sm">
+                  {room.scheduledStartAt
+                    ? "در انتظار زمان شروع خودکار یا شروع دستی توسط میزبان…"
+                    : "در انتظار شروع بازی توسط میزبان…"}
+                </p>
               </Card>
             )}
           </>

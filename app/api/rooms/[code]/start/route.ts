@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const COUNTDOWN_MS = 3500; // 3, 2, 1, GO — gives clients time to sync before "PLAYING"
+import { COUNTDOWN_MS } from "@/lib/game/auto-start";
 
 export async function POST(
   req: NextRequest,
@@ -16,18 +15,18 @@ export async function POST(
     select: { id: true, hostId: true, status: true },
   });
   if (!room) {
-    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    return NextResponse.json({ error: "اتاق پیدا نشد." }, { status: 404 });
   }
   if (room.hostId !== playerId) {
-    return NextResponse.json({ error: "Only the host can start the game." }, { status: 403 });
+    return NextResponse.json({ error: "فقط میزبان می‌تواند بازی را شروع کند." }, { status: 403 });
   }
   if (room.status !== "LOBBY") {
-    return NextResponse.json({ error: "Game has already started." }, { status: 409 });
+    return NextResponse.json({ error: "بازی قبلاً شروع شده است." }, { status: 409 });
   }
 
   const playerCount = await prisma.player.count({ where: { roomId: room.id } });
   if (playerCount < 1) {
-    return NextResponse.json({ error: "Need at least 1 player to start." }, { status: 400 });
+    return NextResponse.json({ error: "برای شروع حداقل به ۱ بازیکن نیاز است." }, { status: 400 });
   }
 
   // startedAt is set in the future so all polling clients can show the same

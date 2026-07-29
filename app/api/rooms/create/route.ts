@@ -18,32 +18,48 @@ export async function POST(req: NextRequest) {
     const nickname = (formData.get("nickname") as string | null)?.trim();
     const difficulty = (formData.get("difficulty") as string | null) as DifficultyKey | null;
     const password = (formData.get("password") as string | null) ?? "";
+    const scheduledStartAtRaw = formData.get("scheduledStartAt") as string | null;
 
     const requiredPassword = process.env.CREATE_GAME_PASSWORD;
     if (requiredPassword && password !== requiredPassword) {
-      return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
+      return NextResponse.json({ error: "رمز عبور اشتباه است." }, { status: 401 });
     }
 
     if (!file) {
-      return NextResponse.json({ error: "No image uploaded." }, { status: 400 });
+      return NextResponse.json({ error: "هیچ تصویری آپلود نشده است." }, { status: 400 });
     }
     if (!nickname || nickname.length < 1 || nickname.length > 20) {
       return NextResponse.json(
-        { error: "Nickname must be between 1 and 20 characters." },
+        { error: "نام مستعار باید بین ۱ تا ۲۰ کاراکتر باشد." },
         { status: 400 }
       );
     }
     if (!difficulty || !DIFFICULTIES[difficulty]) {
-      return NextResponse.json({ error: "Invalid difficulty selected." }, { status: 400 });
+      return NextResponse.json({ error: "سطح دشواری انتخاب‌شده نامعتبر است." }, { status: 400 });
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Unsupported image type. Use JPG, PNG, WebP, or GIF." },
+        { error: "نوع تصویر پشتیبانی نمی‌شود. از JPG، PNG، WebP یا GIF استفاده کنید." },
         { status: 400 }
       );
     }
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "Image must be smaller than 10MB." }, { status: 400 });
+      return NextResponse.json({ error: "حجم تصویر باید کمتر از ۱۰ مگابایت باشد." }, { status: 400 });
+    }
+
+    let scheduledStartAt: Date | null = null;
+    if (scheduledStartAtRaw) {
+      const parsed = new Date(scheduledStartAtRaw);
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: "زمان شروع نامعتبر است." }, { status: 400 });
+      }
+      if (parsed.getTime() <= Date.now()) {
+        return NextResponse.json(
+          { error: "زمان شروع باید در آینده باشد." },
+          { status: 400 }
+        );
+      }
+      scheduledStartAt = parsed;
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -67,7 +83,7 @@ export async function POST(req: NextRequest) {
       generated = await generatePuzzleFromImage(buffer, code, difficulty);
     } catch (err) {
       return NextResponse.json(
-        { error: err instanceof Error ? err.message : "Failed to process image." },
+        { error: err instanceof Error ? err.message : "پردازش تصویر با خطا مواجه شد." },
         { status: 400 }
       );
     }
@@ -84,6 +100,7 @@ export async function POST(req: NextRequest) {
           rows,
           cols,
           status: "LOBBY",
+          scheduledStartAt,
           pieces: {
             create: generated.pieces.map((p) => ({
               pieceIndex: p.pieceIndex,
@@ -118,6 +135,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("Room creation failed:", err);
-    return NextResponse.json({ error: "Something went wrong creating the room." }, { status: 500 });
+    return NextResponse.json({ error: "خطایی در ساخت اتاق رخ داد." }, { status: 500 });
   }
 }

@@ -35,7 +35,7 @@ export default function RoomCard({ code, inviteUrl }: RoomCardProps) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join my Puzzle Race!", url: inviteUrl });
+        await navigator.share({ title: "به مسابقه پازل من بپیوند!", url: inviteUrl });
       } catch {
         // user cancelled share sheet
       }
@@ -46,7 +46,7 @@ export default function RoomCard({ code, inviteUrl }: RoomCardProps) {
 
   return (
     <Card strong className="text-center">
-      <p className="text-sm text-white/50 mb-2">Room Code</p>
+      <p className="text-sm text-white/50 mb-2">کد اتاق</p>
       <motion.p
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -61,10 +61,10 @@ export default function RoomCard({ code, inviteUrl }: RoomCardProps) {
 
       <div className="flex gap-3">
         <Button variant="secondary" onClick={copy} fullWidth icon={copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}>
-          {copied ? "Copied!" : "Copy Link"}
+          {copied ? "کپی شد!" : "کپی لینک"}
         </Button>
         <Button variant="primary" onClick={share} fullWidth icon={<Share2 className="h-5 w-5" />}>
-          Share
+          اشتراک‌گذاری
         </Button>
       </div>
     </Card>

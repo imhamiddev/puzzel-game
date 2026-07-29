@@ -12,7 +12,7 @@ export async function POST(
 
   if (!nickname || nickname.length < 1 || nickname.length > 20) {
     return NextResponse.json(
-      { error: "Nickname must be between 1 and 20 characters." },
+      { error: "نام مستعار باید بین ۱ تا ۲۰ کاراکتر باشد." },
       { status: 400 }
     );
   }
@@ -22,11 +22,17 @@ export async function POST(
     select: { id: true, status: true },
   });
   if (!room) {
-    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    return NextResponse.json({ error: "اتاق پیدا نشد." }, { status: 404 });
+  }
+  if (room.status === "FINISHED") {
+    return NextResponse.json(
+      { error: "این بازی به پایان رسیده است." },
+      { status: 409 }
+    );
   }
   if (room.status !== "LOBBY") {
     return NextResponse.json(
-      { error: "This game has already started. You can't join right now." },
+      { error: "این بازی قبلاً شروع شده است و امکان پیوستن وجود ندارد." },
       { status: 409 }
     );
   }
@@ -52,7 +58,7 @@ export async function POST(
   });
 
   if (!player) {
-    return NextResponse.json({ error: "This room is full (max 20 players)." }, { status: 409 });
+    return NextResponse.json({ error: "این اتاق پر است (حداکثر ۵۰ بازیکن)." }, { status: 409 });
   }
 
   return NextResponse.json({ playerId: player.id, roomId: room.id });

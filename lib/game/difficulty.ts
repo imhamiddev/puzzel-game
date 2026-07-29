@@ -12,35 +12,35 @@ export interface DifficultyConfig {
 export const DIFFICULTIES: Record<DifficultyKey, DifficultyConfig> = {
   EASY: {
     key: "EASY",
-    label: "Easy",
+    label: "ساده",
     rows: 3,
     cols: 3,
     pieces: 9,
-    description: "3 × 3 — 9 pieces",
+    description: "۳ × ۳ — ۹ قطعه",
   },
   MEDIUM: {
     key: "MEDIUM",
-    label: "Medium",
+    label: "متوسط",
     rows: 4,
     cols: 4,
     pieces: 16,
-    description: "4 × 4 — 16 pieces",
+    description: "۴ × ۴ — ۱۶ قطعه",
   },
   HARD: {
     key: "HARD",
-    label: "Hard",
+    label: "سخت",
     rows: 6,
     cols: 6,
     pieces: 36,
-    description: "6 × 6 — 36 pieces",
+    description: "۶ × ۶ — ۳۶ قطعه",
   },
   EXPERT: {
     key: "EXPERT",
-    label: "Expert",
+    label: "حرفه‌ای",
     rows: 8,
     cols: 8,
     pieces: 64,
-    description: "8 × 8 — 64 pieces",
+    description: "۸ × ۸ — ۶۴ قطعه",
   },
 };
 

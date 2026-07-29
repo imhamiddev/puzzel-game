@@ -16,8 +16,8 @@ export default function PlayerList({ players }: { players: LobbyPlayer[] }) {
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-white">Players</h3>
-        <span className="text-sm text-white/50">{players.length} joined</span>
+        <h3 className="font-semibold text-white">بازیکنان</h3>
+        <span className="text-sm text-white/50">{players.length} نفر پیوسته</span>
       </div>
       <div className="space-y-2 max-h-72 overflow-y-auto">
         <AnimatePresence initial={false}>
@@ -36,14 +36,14 @@ export default function PlayerList({ players }: { players: LobbyPlayer[] }) {
               <p className="font-medium text-white flex-1 truncate">{p.nickname}</p>
               {p.isHost && (
                 <span className="flex items-center gap-1 text-xs font-semibold text-gold bg-gold/10 px-2.5 py-1 rounded-full">
-                  <Crown className="h-3 w-3" /> Host
+                  <Crown className="h-3 w-3" /> میزبان
                 </span>
               )}
             </motion.div>
           ))}
         </AnimatePresence>
         {players.length === 0 && (
-          <p className="text-center text-white/40 text-sm py-6">Waiting for players to join…</p>
+          <p className="text-center text-white/40 text-sm py-6">در انتظار پیوستن بازیکنان…</p>
         )}
       </div>
     </Card>

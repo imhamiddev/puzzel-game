@@ -37,6 +37,7 @@ model Room {
   cols      Int        @default(4)
   status    RoomStatus @default(LOBBY)
   startedAt DateTime?
+  scheduledStartAt DateTime? // if set, room auto-starts at this UTC instant
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

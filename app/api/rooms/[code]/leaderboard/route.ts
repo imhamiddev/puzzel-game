@@ -12,7 +12,7 @@ export async function GET(
   });
 
   if (!room) {
-    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    return NextResponse.json({ error: "اتاق پیدا نشد." }, { status: 404 });
   }
 
   // Ranking: 1) fastest completion time, 2) lowest moves.

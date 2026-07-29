@@ -13,13 +13,14 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Move, TrendingUp } from "lucide-react";
+import { Move, TrendingUp, Flag } from "lucide-react";
 import Skeleton from "@/components/ui/Skeleton";
 import PuzzleBoard, { type BoardPieceData } from "@/components/game/PuzzleBoard";
 import PieceTray from "@/components/game/PieceTray";
 import PuzzlePieceComponent from "@/components/game/PuzzlePiece";
 import Timer from "@/components/game/Timer";
 import WinnerModal from "@/components/game/WinnerModal";
+import RoomUnavailable from "@/components/game/RoomUnavailable";
 import { usePlayerSession } from "@/lib/hooks/usePlayerSession";
 
 interface PieceData {
@@ -38,6 +39,7 @@ interface RoomPiecesResponse {
     status: "LOBBY" | "COUNTDOWN" | "PLAYING" | "FINISHED";
     startedAt: string | null;
     previewUrl: string;
+    hostId?: string;
   };
   pieces: PieceData[];
 }
@@ -60,7 +62,7 @@ export default function PlayPage() {
   const [data, setData] = useState<RoomPiecesResponse | null>(null);
   const [slots, setSlots] = useState<(BoardPieceData | null)[]>([]);
   const [tray, setTray] = useState<BoardPieceData[]>([]);
-  const [phase, setPhase] = useState<"loading" | "countdown" | "playing" | "finished">("loading");
+  const [phase, setPhase] = useState<"loading" | "countdown" | "playing" | "finished" | "notfound">("loading");
   const [countdownVal, setCountdownVal] = useState<number | null>(null);
   const [moves, setMoves] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -68,6 +70,9 @@ export default function PlayPage() {
   const [showWinner, setShowWinner] = useState(false);
   const [finishTime, setFinishTime] = useState(0);
   const [activePiece, setActivePiece] = useState<BoardPieceData | null>(null);
+  const [isHost, setIsHost] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   const submittingRef = useRef(false);
   const finishedRef = useRef(false);
 
@@ -83,7 +88,10 @@ export default function PlayPage() {
   const init = useCallback(async () => {
     const res = await fetch(`/api/rooms/${code}/pieces`);
     const json: RoomPiecesResponse = await res.json();
-    if (!res.ok) return;
+    if (!res.ok) {
+      setPhase("notfound");
+      return;
+    }
     setData(json);
 
     const total = json.room.rows * json.room.cols;
@@ -109,6 +117,18 @@ export default function PlayPage() {
     if (session) init();
   }, [session, init]);
 
+  // Determine host status from the room record (pieces endpoint doesn't
+  // include hostId, so fetch the lightweight room endpoint once).
+  useEffect(() => {
+    if (!session) return;
+    fetch(`/api/rooms/${code}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.room?.hostId) setIsHost(d.room.hostId === session.playerId);
+      })
+      .catch(() => {});
+  }, [code, session]);
+
   useEffect(() => {
     if (phase !== "countdown" || !data?.room.startedAt) return;
     const startMs = new Date(data.room.startedAt).getTime();
@@ -126,6 +146,20 @@ export default function PlayPage() {
     const interval = setInterval(tick, 200);
     return () => clearInterval(interval);
   }, [phase, data]);
+
+  // Poll room status while playing so everyone moves to results once the
+  // host force-ends the game (or all players finish organically).
+  useEffect(() => {
+    if (phase !== "playing" && phase !== "countdown") return;
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/rooms/${code}`);
+      const json = await res.json();
+      if (res.ok && json.room?.status === "FINISHED") {
+        router.push(`/room/${code}/results`);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [phase, code, router]);
 
   const correctSet = useMemo(() => {
     const set = new Set<number>();
@@ -170,6 +204,21 @@ export default function PlayPage() {
     },
     [code, session]
   );
+
+  const handleEndGame = async () => {
+    if (!session) return;
+    setEnding(true);
+    try {
+      await fetch(`/api/rooms/${code}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId: session.playerId }),
+      });
+      router.push(`/room/${code}/results`);
+    } catch {
+      setEnding(false);
+    }
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const id = event.active.id as string;
@@ -240,7 +289,16 @@ export default function PlayPage() {
     () => (data ? (boardSize - 3 * (data.room.cols - 1)) / data.room.cols : 40),
     [data, boardSize]
   );
-  const trayPieceSize = useMemo(() => Math.min(pieceSize, 76), [pieceSize]);
+  const trayPieceSize = useMemo(() => Math.min(pieceSize, 64), [pieceSize]);
+
+  if (phase === "notfound") {
+    return (
+      <RoomUnavailable
+        title="اتاق پیدا نشد"
+        description="اتاقی با این کد پیدا نشد یا دیگر در دسترس نیست."
+      />
+    );
+  }
 
   if (phase === "loading" || !data) {
     return (
@@ -269,7 +327,7 @@ export default function PlayPage() {
             {countdownVal && countdownVal > 0 ? (
               <p className="text-9xl text-gradient">{countdownVal}</p>
             ) : (
-              <p className="text-7xl text-accent">GO!</p>
+              <p className="text-7xl text-accent">شروع!</p>
             )}
           </motion.div>
         </AnimatePresence>
@@ -278,11 +336,10 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="relative min-h-screen px-4 py-4 game-lock-scroll safe-top safe-bottom flex flex-col">
-
-      <div className="grid grid-cols-3 gap-2.5 mb-4 max-w-md mx-auto w-full shrink-0">
+    <main className="relative min-h-screen px-4 pt-4 pb-2 game-lock-scroll safe-top flex flex-col">
+      <div className="grid grid-cols-3 gap-2.5 mb-3 max-w-md mx-auto w-full shrink-0">
         <div className="glass rounded-2xl py-3 text-center">
-          <p className="text-[10px] text-white/40 uppercase tracking-wide mb-0.5">Time</p>
+          <p className="text-[10px] text-white/40 uppercase tracking-wide mb-0.5">زمان</p>
           <Timer
             startedAt={data.room.startedAt}
             running={phase === "playing"}
@@ -291,20 +348,52 @@ export default function PlayPage() {
         </div>
         <div className="glass rounded-2xl py-3 text-center">
           <p className="text-[10px] text-white/40 uppercase tracking-wide mb-0.5 flex items-center justify-center gap-1">
-            <Move className="h-2.5 w-2.5" /> Moves
+            <Move className="h-2.5 w-2.5" /> حرکت‌ها
           </p>
           <p className="font-mono font-bold text-white text-lg">{moves}</p>
         </div>
         <div className="glass rounded-2xl py-3 text-center">
           <p className="text-[10px] text-white/40 uppercase tracking-wide mb-0.5 flex items-center justify-center gap-1">
-            <TrendingUp className="h-2.5 w-2.5" /> Progress
+            <TrendingUp className="h-2.5 w-2.5" /> پیشرفت
           </p>
-          <p className="font-mono font-bold text-accent text-lg">{progress}%</p>
+          <p className="font-mono font-bold text-accent text-lg">{progress}٪</p>
         </div>
       </div>
 
+      {isHost && (
+        <div className="max-w-md mx-auto w-full mb-2 shrink-0">
+          {showEndConfirm ? (
+            <div className="glass rounded-2xl p-3 flex items-center gap-2">
+              <p className="text-xs text-white/70 flex-1">
+                بازی برای همه پایان می‌یابد. مطمئن هستید؟
+              </p>
+              <button
+                onClick={() => setShowEndConfirm(false)}
+                className="h-9 px-3 rounded-xl text-xs font-semibold text-white/60 bg-white/5"
+              >
+                انصراف
+              </button>
+              <button
+                onClick={handleEndGame}
+                disabled={ending}
+                className="h-9 px-3 rounded-xl text-xs font-semibold text-white bg-red-500/90 disabled:opacity-50"
+              >
+                {ending ? "در حال پایان…" : "پایان بازی"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowEndConfirm(true)}
+              className="w-full h-10 rounded-2xl glass flex items-center justify-center gap-2 text-xs font-semibold text-white/60"
+            >
+              <Flag className="h-3.5 w-3.5" /> پایان دادن به بازی برای همه
+            </button>
+          )}
+        </div>
+      )}
+
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full min-h-0">
           <PuzzleBoard
             rows={data.room.rows}
             cols={data.room.cols}
@@ -314,7 +403,7 @@ export default function PlayPage() {
           />
         </div>
 
-        <div className="max-w-md mx-auto w-full mt-4 shrink-0">
+        <div className="max-w-md mx-auto w-full mt-2 mb-2 shrink-0 safe-bottom">
           <PieceTray pieces={tray} pieceSize={trayPieceSize} />
         </div>
 

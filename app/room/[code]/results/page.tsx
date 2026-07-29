@@ -38,10 +38,11 @@ export default function ResultsPage() {
       const data = await res.json();
       if (res.ok) {
         setEntries(data.players);
-        // Stop polling once every player has finished — nothing left to
-        // update, so continuing to hit the API every 3s would just waste
-        // requests for both the client and the server.
-        if (data.players.length > 0 && data.players.every((p: LeaderboardEntry) => p.finished)) {
+        // Stop polling once the room is done — either every player finished
+        // organically, or the host force-ended it (status is FINISHED
+        // either way), so there's nothing left to update.
+        const allFinished = data.players.length > 0 && data.players.every((p: LeaderboardEntry) => p.finished);
+        if (data.status === "FINISHED" || allFinished) {
           stopped = true;
           clearInterval(interval);
         }
@@ -62,9 +63,9 @@ export default function ResultsPage() {
           <div className="inline-flex h-14 w-14 rounded-2xl bg-gold-gradient items-center justify-center shadow-glow mb-3">
             <Trophy className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Final Results</h1>
+          <h1 className="text-3xl font-bold text-white">نتایج نهایی</h1>
           <p className="text-white/50 text-sm mt-1">
-            {allFinished ? "Everyone has finished!" : "Live results — refreshing automatically"}
+            {allFinished ? "همه بازیکنان به پایان رساندند!" : "نتایج زنده — به‌روزرسانی خودکار"}
           </p>
         </motion.div>
 
@@ -80,10 +81,10 @@ export default function ResultsPage() {
 
         <div className="flex gap-3 mt-8">
           <Button variant="secondary" fullWidth onClick={() => router.push("/")} icon={<Home className="h-5 w-5" />}>
-            Home
+            صفحه اصلی
           </Button>
           <Button fullWidth onClick={() => router.push("/create")} icon={<RotateCcw className="h-5 w-5" />}>
-            New Game
+            بازی جدید
           </Button>
         </div>
       </div>

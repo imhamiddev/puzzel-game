@@ -21,7 +21,7 @@ export async function POST(
   const board = body.board as { position: number; pieceIndex: number }[] | undefined;
 
   if (!playerId || !Array.isArray(board)) {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 });
   }
 
   const room = await prisma.room.findUnique({
@@ -29,10 +29,10 @@ export async function POST(
     select: { id: true, code: true, status: true, startedAt: true, rows: true, cols: true },
   });
   if (!room) {
-    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    return NextResponse.json({ error: "اتاق پیدا نشد." }, { status: 404 });
   }
   if (room.status !== "PLAYING" || !room.startedAt) {
-    return NextResponse.json({ error: "Game is not in progress." }, { status: 409 });
+    return NextResponse.json({ error: "بازی در حال اجرا نیست." }, { status: 409 });
   }
 
   const player = await prisma.player.findUnique({
@@ -40,7 +40,7 @@ export async function POST(
     select: { id: true, roomId: true, moves: true, finished: true },
   });
   if (!player || player.roomId !== room.id) {
-    return NextResponse.json({ error: "Player not found in this room." }, { status: 404 });
+    return NextResponse.json({ error: "بازیکن در این اتاق پیدا نشد." }, { status: 404 });
   }
   if (player.finished) {
     return NextResponse.json({ progress: 100, finished: true, moves: player.moves });
