@@ -19,7 +19,11 @@ export default function PieceTray({ pieces, pieceSize }: PieceTrayProps) {
         isOver ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.03]"
       }`}
     >
-      <div className="flex gap-2 overflow-x-auto pb-1 no-select" style={{ minHeight: pieceSize }}>
+      <div
+        dir="ltr"
+        className="flex gap-2 overflow-x-auto pb-1 no-select"
+        style={{ minHeight: pieceSize }}
+      >
         {pieces.length === 0 && (
           <p className="text-white/30 text-sm py-2 px-1">تمام قطعات روی تخته قرار گرفتند</p>
         )}

@@ -62,6 +62,7 @@ export default function PuzzleBoard({ rows, cols, boardSize, slots, correctSet }
 
   return (
     <div
+      dir="ltr"
       className="grid mx-auto no-select"
       style={{
         gridTemplateColumns: `repeat(${cols}, ${pieceSize}px)`,

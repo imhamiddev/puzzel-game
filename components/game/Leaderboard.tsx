@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy } from "lucide-react";
+import { Trophy, Medal, Award } from "lucide-react";
 import { formatTime } from "./Timer";
 import clsx from "clsx";
 
@@ -15,9 +15,9 @@ export interface LeaderboardEntry {
 }
 
 const medalStyles = [
-  { emoji: "🥇", ring: "ring-gold/60", text: "text-gold", bg: "bg-gold-gradient" },
-  { emoji: "🥈", ring: "ring-silver/50", text: "text-silver", bg: "bg-gradient-to-br from-slate-300 to-slate-400" },
-  { emoji: "🥉", ring: "ring-bronze/50", text: "text-bronze", bg: "bg-gradient-to-br from-orange-300 to-orange-500" },
+  { Icon: Trophy, ring: "ring-gold/60", text: "text-gold", bg: "bg-gold-gradient" },
+  { Icon: Medal, ring: "ring-silver/50", text: "text-silver", bg: "bg-gradient-to-br from-slate-300 to-slate-400" },
+  { Icon: Award, ring: "ring-bronze/50", text: "text-bronze", bg: "bg-gradient-to-br from-orange-300 to-orange-500" },
 ];
 
 export default function Leaderboard({ entries, highlightId }: { entries: LeaderboardEntry[]; highlightId?: string }) {
@@ -44,7 +44,7 @@ export default function Leaderboard({ entries, highlightId }: { entries: Leaderb
                 medal ? medal.bg + " text-black/80" : "bg-white/10 text-white/70"
               )}
             >
-              {medal ? medal.emoji : i + 1}
+              {medal ? <medal.Icon className="h-5 w-5" /> : i + 1}
             </div>
 
             <div className="flex-1 min-w-0">

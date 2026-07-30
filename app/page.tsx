@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Puzzle, Zap, Users, ArrowLeft, X, Settings } from "lucide-react";
+import { Puzzle, Zap, Users, ArrowLeft, X, Settings, Image, Trophy } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 
@@ -22,10 +22,10 @@ export default function HomePage() {
     <main className="relative min-h-screen flex flex-col">
       <button
         onClick={() => router.push("/account")}
-        className="absolute top-5 left-5 h-10 w-10 rounded-full glass flex items-center justify-center text-white/60 z-10 safe-top"
+        className="absolute top-5 left-5 h-10 w-10 rounded-full glass flex items-center justify-center leading-none text-white/60 z-10 safe-top"
         aria-label="تنظیمات حساب"
       >
-        <Settings className="h-5 w-5" />
+        <Settings className="h-5 w-5 shrink-0" />
       </button>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 safe-top safe-bottom">
@@ -84,12 +84,12 @@ export default function HomePage() {
           className="grid grid-cols-3 gap-3 mt-16 w-full max-w-lg"
         >
           {[
-            { label: "هر عکسی", value: "📸" },
-            { label: "مسابقه زنده", value: "⚡" },
-            { label: "جدول امتیازات", value: "🏆" },
+            { label: "هر عکسی", Icon: Image },
+            { label: "مسابقه زنده", Icon: Zap },
+            { label: "جدول امتیازات", Icon: Trophy },
           ].map((f) => (
             <div key={f.label} className="glass rounded-2xl py-4 text-center">
-              <p className="text-2xl mb-1">{f.value}</p>
+              <f.Icon className="h-6 w-6 text-white/70 mx-auto mb-1.5" />
               <p className="text-xs text-white/50 font-medium">{f.label}</p>
             </div>
           ))}

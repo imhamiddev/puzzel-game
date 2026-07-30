@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, User } from "lucide-react";
+import { Crown, User, Trophy, Medal, Award } from "lucide-react";
 import Card from "@/components/ui/Card";
 
 export interface LobbyPlayer {
@@ -10,7 +10,7 @@ export interface LobbyPlayer {
   isHost: boolean;
 }
 
-const medals = ["🥇", "🥈", "🥉"];
+const medalIcons = [Trophy, Medal, Award];
 
 export default function PlayerList({ players }: { players: LobbyPlayer[] }) {
   return (
@@ -30,8 +30,15 @@ export default function PlayerList({ players }: { players: LobbyPlayer[] }) {
               transition={{ duration: 0.2 }}
               className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3"
             >
-              <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-lg shrink-0">
-                {i < 3 ? medals[i] : <User className="h-4 w-4 text-white/60" />}
+              <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                {i < 3 ? (
+                  (() => {
+                    const MedalIcon = medalIcons[i];
+                    return <MedalIcon className="h-4 w-4 text-white/70" />;
+                  })()
+                ) : (
+                  <User className="h-4 w-4 text-white/60" />
+                )}
               </div>
               <p className="font-medium text-white flex-1 truncate">{p.nickname}</p>
               {p.isHost && (

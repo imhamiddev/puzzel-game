@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { Trophy, X } from "lucide-react";
+import { Trophy, X, PartyPopper } from "lucide-react";
 import { formatTime } from "./Timer";
 import Button from "@/components/ui/Button";
 
@@ -101,8 +101,14 @@ export default function WinnerModal({ open, onClose, rank, finishTime, moves, on
               <Trophy className="h-10 w-10 text-white" />
             </motion.div>
 
-            <h2 className="text-2xl font-bold text-white mb-1">
-              {isFirst ? "بردی! 🎉" : "پازل کامل شد!"}
+            <h2 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2">
+              {isFirst ? (
+                <>
+                  بردی! <PartyPopper className="h-5 w-5 text-gold" />
+                </>
+              ) : (
+                "پازل کامل شد!"
+              )}
             </h2>
             <p className="text-white/50 mb-6">
               {isFirst ? "سریع‌تر از همه حل کردی!" : `در جایگاه ${rank} به پایان رساندی`}
