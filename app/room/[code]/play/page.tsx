@@ -169,9 +169,25 @@ export default function PlayPage() {
     return set;
   }, [slots]);
 
+  // Holds the latest board state produced by the user's drags. If a move
+  // comes in while a previous submit is still in flight, we no longer drop
+  // it — we stash it here and the in-flight request's `finally` block picks
+  // it up and sends it right after. Without this, a move made while another
+  // is still submitting (very common once network latency goes up with many
+  // concurrent players) was silently discarded: local state moved on, but
+  // the server never heard about it. If that dropped move happened to be
+  // the one that completed the puzzle, the player would see a finished
+  // board while the server still thought they weren't done — softlocking
+  // them since nothing else re-triggers a submit.
+  const pendingBoardRef = useRef<(BoardPieceData | null)[] | null>(null);
+
   const submitMove = useCallback(
     async (board: (BoardPieceData | null)[]) => {
-      if (!session || submittingRef.current || finishedRef.current) return;
+      if (!session || finishedRef.current) return;
+      if (submittingRef.current) {
+        pendingBoardRef.current = board;
+        return;
+      }
       submittingRef.current = true;
       const boardPayload = board
         .map((piece, position) => (piece ? { position, pieceIndex: piece.pieceIndex } : null))
@@ -200,6 +216,9 @@ export default function PlayPage() {
         }
       } finally {
         submittingRef.current = false;
+        const pending = pendingBoardRef.current;
+        pendingBoardRef.current = null;
+        if (pending) submitMove(pending);
       }
     },
     [code, session]
