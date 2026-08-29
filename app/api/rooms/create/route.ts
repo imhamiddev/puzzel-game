@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { generateRoomCode } from "@/lib/game/room-code";
-import { generatePuzzleFromImage } from "@/lib/game/puzzle-generator";
+import { generatePuzzleFromImage, type PuzzleGenerationResult } from "@/lib/game/puzzle-generator";
 import { DIFFICULTIES, type DifficultyKey } from "@/lib/game/difficulty";
+import { getStorageProvider } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -64,21 +65,18 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // Generate a unique room code, retry on collision
-    let code = generateRoomCode();
-    for (let attempts = 0; attempts < 5; attempts++) {
-      const existing = await prisma.room.findUnique({
-        where: { code },
-        select: { id: true },
-      });
-      if (!existing) break;
-      code = generateRoomCode();
-    }
-
     const { rows, cols } = DIFFICULTIES[difficulty];
 
-    let generated;
+    // generatePuzzleFromImage uploads pieces under a path keyed by the room
+    // code, so we need a code up front. A pre-check findUnique here would
+    // still race against another concurrent create between the check and
+    // the actual insert, so instead we generate pieces once and then retry
+    // the whole create-with-a-fresh-code loop if the code collides — this
+    // is rare (6 chars from a 32-letter alphabet) but should never surface
+    // as a hard failure to the user, especially after they've waited for
+    // image processing to finish.
+    let code = generateRoomCode();
+    let generated: PuzzleGenerationResult;
     try {
       generated = await generatePuzzleFromImage(buffer, code, difficulty);
     } catch (err) {
@@ -88,46 +86,75 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { room, host } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const room = await tx.room.create({
-        data: {
-          code,
-          hostId: "", // set right after host player is created, in the same transaction
-          imageUrl: generated.fullImageUrl,
-          imageWidth: generated.width,
-          imageHeight: generated.height,
-          gridSize: difficulty,
-          rows,
-          cols,
-          status: "LOBBY",
-          scheduledStartAt,
-          pieces: {
-            create: generated.pieces.map((p) => ({
-              pieceIndex: p.pieceIndex,
-              correctPosition: p.correctPosition,
-              imageUrl: p.imageUrl,
-              row: p.row,
-              col: p.col,
-            })),
-          },
-        },
-      });
+    const MAX_CODE_ATTEMPTS = 3;
+    let room: { code: string } | undefined;
+    let host: { id: string } | undefined;
+    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      try {
+        const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          const room = await tx.room.create({
+            data: {
+              code,
+              hostId: "", // set right after host player is created, in the same transaction
+              imageUrl: generated.fullImageUrl,
+              imageWidth: generated.width,
+              imageHeight: generated.height,
+              gridSize: difficulty,
+              rows,
+              cols,
+              status: "LOBBY",
+              scheduledStartAt,
+              pieces: {
+                create: generated.pieces.map((p) => ({
+                  pieceIndex: p.pieceIndex,
+                  correctPosition: p.correctPosition,
+                  imageUrl: p.imageUrl,
+                  row: p.row,
+                  col: p.col,
+                })),
+              },
+            },
+          });
 
-      const host = await tx.player.create({
-        data: {
-          roomId: room.id,
-          nickname,
-          isHost: true,
-        },
-      });
+          const host = await tx.player.create({
+            data: {
+              roomId: room.id,
+              nickname,
+              isHost: true,
+            },
+          });
 
-      await tx.room.update({
-        where: { id: room.id },
-        data: { hostId: host.id },
-      });
+          await tx.room.update({
+            where: { id: room.id },
+            data: { hostId: host.id },
+          });
 
-      return { room, host };
-    });
+          return { room, host };
+        });
+        room = result.room;
+        host = result.host;
+        break;
+      } catch (err) {
+        // P2002 = unique constraint violation (the `code` column). Retry
+        // with a fresh code rather than failing the whole request — the
+        // uploaded pieces are already stored under the old code's path, so
+        // move them to the new one before trying again.
+        const isCodeCollision =
+          typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
+        if (!isCodeCollision || attempt === MAX_CODE_ATTEMPTS - 1) {
+          throw err;
+        }
+        const oldCode = code;
+        code = generateRoomCode();
+        generated = await generatePuzzleFromImage(buffer, code, difficulty);
+        const storage = getStorageProvider();
+        await storage.deletePrefix(`rooms/${oldCode}`).catch(() => {});
+      }
+    }
+
+    if (!room || !host) {
+      return NextResponse.json({ error: "خطایی در ساخت اتاق رخ داد." }, { status: 500 });
+    }
 
     return NextResponse.json({
       roomCode: room.code,
