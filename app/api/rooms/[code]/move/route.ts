@@ -49,16 +49,20 @@ export async function POST(
   const totalPieces = room.rows * room.cols;
   const progress = computeProgress(board, totalPieces);
   const complete = isBoardComplete(board, totalPieces);
-  const newMoves = player.moves + 1;
 
   if (complete) {
     const finishTime = computeServerFinishTime(room.startedAt);
 
     const { updated, allFinished } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Use an atomic `increment` rather than reading player.moves and
+      // writing moves+1: two move requests from the same player landing
+      // close together (very possible once players start rapid-fire
+      // dragging pieces) would otherwise both read the same starting value
+      // and one increment would silently get lost.
       const updated = await tx.player.update({
         where: { id: player.id },
         data: {
-          moves: newMoves,
+          moves: { increment: 1 },
           progress: 100,
           finished: true,
           finishTime,
@@ -105,7 +109,7 @@ export async function POST(
 
   const updated = await prisma.player.update({
     where: { id: player.id },
-    data: { moves: newMoves, progress, lastSeenAt: new Date() },
+    data: { moves: { increment: 1 }, progress, lastSeenAt: new Date() },
   });
 
   return NextResponse.json({ progress: updated.progress, finished: false, moves: updated.moves });
